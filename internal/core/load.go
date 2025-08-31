@@ -1,4 +1,4 @@
-package internal
+package core
 
 func (c *Core) RegisterCommand(pattern string, handler interface{}) {
 	if c.Commands == nil {

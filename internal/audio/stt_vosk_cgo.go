@@ -1,11 +1,11 @@
 //go:build cgo_vosk
 // +build cgo_vosk
 
-package internal
+package audio
 
 /*
-#cgo CFLAGS:  -I${SRCDIR}/../build/vosk
-#cgo LDFLAGS: -L${SRCDIR}/../build/vosk -lvosk -pthread -Wl,-rpath,'$ORIGIN/../build/vosk'
+#cgo CFLAGS:  -I${SRCDIR}/../../build/vosk
+#cgo LDFLAGS: -L${SRCDIR}/../../build/vosk -lvosk -pthread -Wl,-rpath,'$ORIGIN/../../build/vosk'
 #include <stdlib.h>
 #include <vosk_api.h>
 */

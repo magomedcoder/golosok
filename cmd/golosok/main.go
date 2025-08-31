@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/magomedcoder/golosok/internal"
+	"github.com/magomedcoder/golosok/internal/audio"
 	"github.com/magomedcoder/golosok/internal/commands/greetings"
+	"github.com/magomedcoder/golosok/internal/core"
 	"github.com/magomedcoder/golosok/internal/normalize"
 	"log"
 	"os/signal"
@@ -18,9 +19,9 @@ func main() {
 
 	sampleRate := 16000
 
-	c := internal.NewCore()
+	c := core.NewCore()
 
-	internal.RegisterConsole(c)
+	audio.RegisterConsole(c)
 
 	normalize.RegisterPrepare(c)
 
@@ -30,17 +31,17 @@ func main() {
 		log.Printf("ошибка при настройке: %v", err)
 	}
 
-	mic, err := internal.NewMic(sampleRate)
+	mic, err := audio.NewMic(sampleRate)
 	if err != nil {
 		log.Fatalf("mic init: %v", err)
 	}
-	defer func(mic *internal.Mic) {
+	defer func(mic *audio.Mic) {
 		if err := mic.Close(); err != nil {
 			log.Printf("mic-сlose: %v", err)
 		}
 	}(mic)
 
-	stt, err := internal.NewVoskSTT("./models/vosk", sampleRate)
+	stt, err := audio.NewVoskSTT("./models/vosk", sampleRate)
 	if err != nil {
 		log.Fatalf("vosk init: %v", err)
 	}
