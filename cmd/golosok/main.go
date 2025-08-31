@@ -4,16 +4,22 @@ import (
 	"context"
 	"fmt"
 	"github.com/magomedcoder/golosok/internal"
+	"github.com/magomedcoder/golosok/internal/commands/greetings"
 	"log"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	c := internal.NewCore()
+
 	sampleRate := 16000
+
+	greetings.Register(c)
 
 	mic, err := internal.NewMic(sampleRate)
 	if err != nil {
@@ -31,6 +37,8 @@ func main() {
 	}
 	defer stt.Close()
 
+	mic.SetBlockFunc(c.IsMicBlocked)
+
 	go func() {
 		for {
 			select {
@@ -42,18 +50,29 @@ func main() {
 				}
 
 				fmt.Printf("[РАСПОЗНАНО] %s\n", phrase)
+				c.BlockMic()
+				c.RunInputStr(phrase)
+				c.UnblockMic()
+				c.UpdateTimers()
 			}
 		}
 	}()
 
 	buf := make([]byte, 8000)
 	for ctx.Err() == nil {
+		c.UpdateTimers()
+
+		if c.IsMicBlocked() {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
 
 		n, err := mic.Read(buf)
 		if err != nil {
 			continue
 		}
 
+		//fmt.Println(buf[:n])
 		_ = stt.Accept(buf[:n])
 	}
 }

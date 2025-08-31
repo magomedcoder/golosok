@@ -6,11 +6,13 @@ package internal
 /*
 #cgo CFLAGS:  -I${SRCDIR}/../third_party/vosk/include
 #cgo LDFLAGS: -L${SRCDIR}/../third_party/vosk/lib -lvosk -pthread -Wl,-rpath,'$ORIGIN/../third_party/vosk/lib'
+#include <stdlib.h>
 #include <vosk_api.h>
 */
 import "C"
 import (
 	"encoding/json"
+	"errors"
 	"unsafe"
 )
 
@@ -20,27 +22,29 @@ type VoskSTT struct {
 	out   chan string
 }
 
-func NewVoskSTT(modelPath string, sampleRate int) *VoskSTT {
+func NewVoskSTT(modelPath string, sampleRate int) (*VoskSTT, error) {
 	mp := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(mp))
 
 	m := C.vosk_model_new(mp)
 	if m == nil {
-		return nil
+		return nil, errors.New("не удалось создать модель Vosk")
 	}
 
 	rec := C.vosk_recognizer_new(m, C.float(sampleRate))
 	if rec == nil {
 		C.vosk_model_free(m)
-		return nil
+		return nil, errors.New("не удалось создать распознаватель Vosk")
 	}
+
+	// C.vosk_recognizer_set_words(rec, 1)
 
 	v := &VoskSTT{
 		model: m,
 		rec:   rec,
 		out:   make(chan string, 8),
 	}
-	return v
+	return v, nil
 }
 
 func (v *VoskSTT) Accept(pcm []byte) error {
@@ -48,14 +52,18 @@ func (v *VoskSTT) Accept(pcm []byte) error {
 		return nil
 	}
 
-	res := C.vosk_recognizer_accept_waveform(v.rec, unsafe.Pointer(&pcm[0]), C.int(len(pcm)))
-	if int(res) != 0 {
-		js := C.vosk_recognizer_result(v.rec)
-		if js != nil {
-			go pushJSON(v.out, C.GoString(js))
-		}
+	if len(pcm)%2 != 0 {
+		return errors.New("неверная длина PCM16LE буфера)")
 	}
 
+	res := C.vosk_recognizer_accept_waveform(v.rec, (*C.char)(unsafe.Pointer(&pcm[0])), C.int(len(pcm)))
+	if int(res) != 0 {
+		if js := C.vosk_recognizer_result(v.rec); js != nil {
+			go pushJSON(v.out, C.GoString(js))
+		}
+		// } else if js := C.vosk_recognizer_partial_result(v.rec); js != nil {
+		//     go pushJSON(v.out, C.GoString(js))
+	}
 	return nil
 }
 
@@ -65,8 +73,7 @@ func (v *VoskSTT) Out() <-chan string {
 
 func (v *VoskSTT) Close() error {
 	if v.rec != nil {
-		js := C.vosk_recognizer_final_result(v.rec)
-		if js != nil {
+		if js := C.vosk_recognizer_final_result(v.rec); js != nil {
 			pushJSON(v.out, C.GoString(js))
 		}
 

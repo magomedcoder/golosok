@@ -5,8 +5,9 @@ import (
 )
 
 type Mic struct {
-	stream *portaudio.Stream
-	in     []int16
+	stream  *portaudio.Stream
+	in      []int16
+	blockFn func() bool
 }
 
 func NewMic(sampleRate int) (*Mic, error) {
@@ -30,7 +31,16 @@ func NewMic(sampleRate int) (*Mic, error) {
 	return m, nil
 }
 
+func (m *Mic) SetBlockFunc(f func() bool) {
+	m.blockFn = f
+}
+
 func (m *Mic) Read(dst []byte) (int, error) {
+	if m.blockFn != nil && m.blockFn() {
+		return 0, nil
+	}
+
+	//buf := make([]int16, len(dst)/2)
 	if err := m.stream.Read(); err != nil {
 		return 0, err
 	}
