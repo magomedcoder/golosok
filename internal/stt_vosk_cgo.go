@@ -4,8 +4,8 @@
 package internal
 
 /*
-#cgo CFLAGS:  -I${SRCDIR}/../third_party/vosk/include
-#cgo LDFLAGS: -L${SRCDIR}/../third_party/vosk/lib -lvosk -pthread -Wl,-rpath,'$ORIGIN/../third_party/vosk/lib'
+#cgo CFLAGS:  -I${SRCDIR}/../build/vosk
+#cgo LDFLAGS: -L${SRCDIR}/../build/vosk -lvosk -pthread -Wl,-rpath,'$ORIGIN/../build/vosk'
 #include <stdlib.h>
 #include <vosk_api.h>
 */
@@ -37,7 +37,7 @@ func NewVoskSTT(modelPath string, sampleRate int) (*VoskSTT, error) {
 		return nil, errors.New("не удалось создать распознаватель Vosk")
 	}
 
-	// C.vosk_recognizer_set_words(rec, 1)
+	C.vosk_recognizer_set_words(rec, 1)
 
 	v := &VoskSTT{
 		model: m,
@@ -60,9 +60,9 @@ func (v *VoskSTT) Accept(pcm []byte) error {
 	if int(res) != 0 {
 		if js := C.vosk_recognizer_result(v.rec); js != nil {
 			go pushJSON(v.out, C.GoString(js))
+		} else if js := C.vosk_recognizer_partial_result(v.rec); js != nil {
+			go pushJSON(v.out, C.GoString(js))
 		}
-		// } else if js := C.vosk_recognizer_partial_result(v.rec); js != nil {
-		//     go pushJSON(v.out, C.GoString(js))
 	}
 	return nil
 }

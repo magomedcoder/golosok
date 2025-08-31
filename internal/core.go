@@ -15,11 +15,40 @@ type Core struct {
 	micBlocked   bool
 
 	Commands map[string]interface{}
+
+	Normalizers     map[string][2]interface{}
+	NormalizationID string
+
+	TTSEngines  map[string][3]interface{}
+	TTSEngineID string
 }
 
 func NewCore() *Core {
-	c := &Core{}
+	c := &Core{
+		Commands:        map[string]interface{}{},
+		Normalizers:     map[string][2]interface{}{},
+		NormalizationID: "prepare",
+
+		TTSEngines:  map[string][3]interface{}{},
+		TTSEngineID: "console",
+	}
 	return c
+}
+
+func (c *Core) SetupAssistantVoice() error {
+	if v, ok := c.TTSEngines[c.TTSEngineID]; ok {
+		if init, _ := v[0].(TTSInitFn); init != nil {
+			_ = init(c)
+		}
+	}
+
+	if v, ok := c.Normalizers[c.NormalizationID]; ok {
+		if init, _ := v[0].(NormalizerInitFn); init != nil {
+			_ = init(c)
+		}
+	}
+
+	return nil
 }
 
 func (c *Core) BlockMic() {
@@ -176,11 +205,37 @@ func (c *Core) RunInputStr(s string) bool {
 
 	tokens := splitTokens(s)
 	for i, _ := range tokens {
-
-		rest := joinTokens(tokens[i+1:])
+		rest := joinTokens(tokens[i:])
 		return c.executeNext(rest, c.Commands)
-
 	}
 
 	return c.executeNext(s, c.Commands)
+}
+
+func (c *Core) Normalize(text string) string {
+	if c.NormalizationID == "none" {
+		return text
+	}
+
+	if v, ok := c.Normalizers[c.NormalizationID]; ok {
+		if fn, _ := v[1].(NormalizeFn); fn != nil {
+			return fn(c, text)
+		}
+	}
+
+	return text
+}
+
+func (c *Core) sayVia(id string, text string) error {
+	if v, ok := c.TTSEngines[id]; ok {
+		if say, _ := v[1].(TTSSayFn); say != nil {
+			return say(c, text)
+		}
+	}
+
+	return fmt.Errorf("движок TTS не найден: %s", id)
+}
+
+func (c *Core) Say(text string) {
+	_ = c.sayVia(c.TTSEngineID, c.Normalize(text))
 }

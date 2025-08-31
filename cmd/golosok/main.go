@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/magomedcoder/golosok/internal"
 	"github.com/magomedcoder/golosok/internal/commands/greetings"
+	"github.com/magomedcoder/golosok/internal/normalize"
 	"log"
 	"os/signal"
 	"syscall"
@@ -15,11 +16,19 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	c := internal.NewCore()
-
 	sampleRate := 16000
 
+	c := internal.NewCore()
+
+	internal.RegisterConsole(c)
+
+	normalize.RegisterPrepare(c)
+
 	greetings.Register(c)
+
+	if err := c.SetupAssistantVoice(); err != nil {
+		log.Printf("ошибка при настройке: %v", err)
+	}
 
 	mic, err := internal.NewMic(sampleRate)
 	if err != nil {
