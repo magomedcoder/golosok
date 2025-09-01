@@ -1,8 +1,8 @@
 package audio
 
 import (
-	"fmt"
 	"github.com/magomedcoder/golosok/internal/core"
+	"log"
 )
 
 func RegisterConsole(c *core.Core) {
@@ -10,11 +10,11 @@ func RegisterConsole(c *core.Core) {
 }
 
 func TTSConsoleInit(*core.Core) error {
-	fmt.Println("TTS init console")
+	log.Println("TTS init console")
 	return nil
 }
 
 func TTSConsoleSay(c *core.Core, s string) error {
-	fmt.Printf("TTS console: %s", s)
+	log.Printf("TTS console: %s", s)
 	return nil
 }

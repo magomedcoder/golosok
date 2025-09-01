@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/magomedcoder/golosok/internal/audio"
 	"github.com/magomedcoder/golosok/internal/commands/greetings"
 	"github.com/magomedcoder/golosok/internal/core"
@@ -23,6 +22,7 @@ func main() {
 
 	audio.RegisterConsole(c)
 	audio.RegisterRHVoice(c)
+	audio.RegisterWAVPlayer(c)
 
 	normalize.RegisterPrepare(c)
 
@@ -60,7 +60,7 @@ func main() {
 					continue
 				}
 
-				fmt.Printf("[РАСПОЗНАНО] %s\n", phrase)
+				log.Printf("[РАСПОЗНАНО] %s\n", phrase)
 				c.BlockMic()
 				c.RunInputStr(phrase)
 				c.UnblockMic()
@@ -83,7 +83,6 @@ func main() {
 			continue
 		}
 
-		//fmt.Println(buf[:n])
 		_ = stt.Accept(buf[:n])
 	}
 }

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -9,23 +10,18 @@ import (
 )
 
 type Core struct {
-	timers    [8]int64
-	timersEnd [8]func(*Core)
-	ctxMu     sync.Mutex
-
-	micBlockedMu sync.RWMutex
-	micBlocked   bool
-
-	Commands map[string]interface{}
-
+	timers          [8]int64
+	timersEnd       [8]func(*Core)
+	ctxMu           sync.Mutex
+	micBlockedMu    sync.RWMutex
+	micBlocked      bool
+	Commands        map[string]interface{}
 	Normalizers     map[string][2]interface{}
 	NormalizationID string
-
-	TTSEngines  map[string][3]interface{}
-	TTSEngineID string
-
-	PlayWavID string
-	PlayWavs  map[string][2]interface{}
+	TTSEngines      map[string][3]interface{}
+	TTSEngineID     string
+	PlayWavID       string
+	PlayWavs        map[string][2]interface{}
 }
 
 func NewCore() *Core {
@@ -33,12 +29,10 @@ func NewCore() *Core {
 		Commands:        map[string]interface{}{},
 		Normalizers:     map[string][2]interface{}{},
 		NormalizationID: "prepare",
-
-		TTSEngines:  map[string][3]interface{}{},
-		TTSEngineID: "rhvoice",
-
-		PlayWavID: "audioplayer",
-		PlayWavs:  map[string][2]interface{}{},
+		TTSEngines:      map[string][3]interface{}{},
+		TTSEngineID:     "rhvoice",
+		PlayWavID:       "oto",
+		PlayWavs:        map[string][2]interface{}{},
 	}
 	return c
 }
@@ -83,15 +77,30 @@ func (c *Core) IsMicBlocked() bool {
 	return c.micBlocked
 }
 
+func (c *Core) SetTimer(seconds int, end func(*Core)) int {
+	now := time.Now().Unix()
+	for i := range c.timers {
+		if c.timers[i] <= 0 {
+			c.timers[i] = now + int64(seconds)
+			c.timersEnd[i] = end
+			log.Printf("Установлен таймер #%d | длительность: %d сек | завершение: %s\n", i, seconds, time.Unix(c.timers[i], 0).Format("2006-01-02 15:04:05"))
+			return i
+		}
+	}
+
+	return -1
+}
+
 func (c *Core) UpdateTimers() {
 	now := time.Now().Unix()
 	for i := range c.timers {
 		if c.timers[i] > 0 && now >= c.timers[i] {
-			fmt.Printf("End Timer ID=%d at %s\n", i, time.Unix(now, 0).Format("2006-01-02 15:04:05"))
+			log.Printf("Таймер ID=%d завершен в %s\n", i, time.Unix(now, 0).Format("2006-01-02 15:04:05"))
 			c.ClearTimer(i, true)
 		}
 	}
 }
+
 func (c *Core) ClearTimer(i int, runEnd bool) {
 	if runEnd && c.timersEnd[i] != nil {
 		c.timersEnd[i](c)
@@ -99,6 +108,14 @@ func (c *Core) ClearTimer(i int, runEnd bool) {
 
 	c.timers[i] = -1
 	c.timersEnd[i] = nil
+}
+
+func (c *Core) ClearTimers() {
+	for i := range c.timers {
+		if c.timers[i] >= 0 {
+			c.ClearTimer(i, false)
+		}
+	}
 }
 
 func splitTokens(s string) []string {
@@ -198,10 +215,6 @@ func (c *Core) executeNext(phrase string, ctx interface{}) bool {
 	if !ok {
 		return false
 	}
-
-	fmt.Println("<< executeNext")
-	fmt.Println(sw)
-	fmt.Println("executeNext >>")
 
 	if fn, found := sw[phrase]; found {
 		return c.callFunc(phrase, fn)

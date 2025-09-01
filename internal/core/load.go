@@ -15,3 +15,7 @@ func (c *Core) RegisterTTS(id string, init TTSInitFn, say TTSSayFn, toFile TTSTo
 func (c *Core) RegisterNormalizer(id string, init NormalizerInitFn, normalize NormalizeFn) {
 	c.Normalizers[id] = [2]interface{}{init, normalize}
 }
+
+func (c *Core) RegisterPlayWav(id string, init PlayWAVInitFn, play PlayWAVFn) {
+	c.PlayWavs[id] = [2]interface{}{init, play}
+}
