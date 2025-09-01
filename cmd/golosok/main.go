@@ -46,7 +46,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("vosk init: %v", err)
 	}
-	defer stt.Close()
+
+	// Для теста
+	//stt := audio.NewFakeSTT([]string{
+	//	"привет",
+	//	"дата",
+	//	"команды",
+	//}, 500*time.Millisecond)
+
+	defer func(stt *audio.FakeSTT) {
+		if err := stt.Close(); err != nil {
+			log.Printf("vosk-сlose: %v", err)
+		}
+	}(stt)
 
 	mic.SetBlockFunc(c.IsMicBlocked)
 
