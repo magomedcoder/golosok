@@ -7,3 +7,7 @@ CID=$(docker create golosok-dependencies-build)
 docker cp "$CID":/opt/out-vosk ./build/vosk
 docker rm "$CID"
 ```
+
+```bash
+sudo apt install rhvoice rhvoice-russian
+```

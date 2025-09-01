@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -21,6 +23,9 @@ type Core struct {
 
 	TTSEngines  map[string][3]interface{}
 	TTSEngineID string
+
+	PlayWavID string
+	PlayWavs  map[string][2]interface{}
 }
 
 func NewCore() *Core {
@@ -30,7 +35,10 @@ func NewCore() *Core {
 		NormalizationID: "prepare",
 
 		TTSEngines:  map[string][3]interface{}{},
-		TTSEngineID: "console",
+		TTSEngineID: "rhvoice",
+
+		PlayWavID: "audioplayer",
+		PlayWavs:  map[string][2]interface{}{},
 	}
 	return c
 }
@@ -44,6 +52,12 @@ func (c *Core) SetupAssistantVoice() error {
 
 	if v, ok := c.Normalizers[c.NormalizationID]; ok {
 		if init, _ := v[0].(NormalizerInitFn); init != nil {
+			_ = init(c)
+		}
+	}
+
+	if v, ok := c.PlayWavs[c.PlayWavID]; ok {
+		if init, _ := v[0].(PlayWAVInitFn); init != nil {
 			_ = init(c)
 		}
 	}
@@ -174,6 +188,11 @@ func splitVariants(s string) []string {
 	return res
 }
 
+func hasNested(v interface{}) bool {
+	_, ok := v.(map[string]interface{})
+	return ok
+}
+
 func (c *Core) executeNext(phrase string, ctx interface{}) bool {
 	sw, ok := ctx.(map[string]interface{})
 	if !ok {
@@ -189,11 +208,20 @@ func (c *Core) executeNext(phrase string, ctx interface{}) bool {
 	}
 
 	for k, v := range sw {
-		fmt.Println("0-0")
-		if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok && rest != "" {
-			return c.callFunc(rest, v)
+		if hasNested(v) {
+			if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok {
+				if m, _ := v.(map[string]interface{}); m != nil {
+					return c.executeNext(rest, m)
+				}
+			}
+		} else {
+			if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok && rest != "" {
+				return c.callFunc(rest, v)
+			}
 		}
 	}
+
+	c.Say("не удалось распознать команду")
 
 	return false
 }
@@ -226,10 +254,25 @@ func (c *Core) Normalize(text string) string {
 	return text
 }
 
+func (c *Core) tempFileName() string {
+	return filepath.Join("runtime", fmt.Sprintf("core_%d", time.Now().UnixNano()))
+}
+
 func (c *Core) sayVia(id string, text string) error {
 	if v, ok := c.TTSEngines[id]; ok {
 		if say, _ := v[1].(TTSSayFn); say != nil {
 			return say(c, text)
+		}
+
+		if toFile, _ := v[2].(TTSToFileFn); toFile != nil {
+			fName := c.tempFileName() + ".wav"
+			if err := toFile(c, text, fName); err != nil {
+				return err
+			}
+
+			defer os.Remove(fName)
+
+			return c.PlayWav(fName)
 		}
 	}
 
@@ -238,4 +281,24 @@ func (c *Core) sayVia(id string, text string) error {
 
 func (c *Core) Say(text string) {
 	_ = c.sayVia(c.TTSEngineID, c.Normalize(text))
+}
+
+func (c *Core) TTSToFile(text, filename string) error {
+	if v, ok := c.TTSEngines[c.TTSEngineID]; ok {
+		if toFile, _ := v[2].(TTSToFileFn); toFile != nil {
+			return toFile(c, c.Normalize(text), filename)
+		}
+	}
+
+	return fmt.Errorf("tts в файл не поддерживается")
+}
+
+func (c *Core) PlayWav(path string) error {
+	if v, ok := c.PlayWavs[c.PlayWavID]; ok {
+		if fn, _ := v[1].(PlayWAVFn); fn != nil {
+			return fn(c, path)
+		}
+	}
+
+	return fmt.Errorf("движок play_wav не найден")
 }

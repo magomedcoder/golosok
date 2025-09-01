@@ -22,6 +22,7 @@ func main() {
 	c := core.NewCore()
 
 	audio.RegisterConsole(c)
+	audio.RegisterRHVoice(c)
 
 	normalize.RegisterPrepare(c)
 

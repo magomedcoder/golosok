@@ -1,17 +1,20 @@
 package audio
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/magomedcoder/golosok/internal/core"
+)
 
-func RegisterConsole(c *Core) {
-	c.RegisterTTS("console", TTSConsoleInit, TTSConsoleSay)
+func RegisterConsole(c *core.Core) {
+	c.RegisterTTS("console", TTSConsoleInit, TTSConsoleSay, nil)
 }
 
-func TTSConsoleInit(*Core) error {
+func TTSConsoleInit(*core.Core) error {
 	fmt.Println("TTS init console")
 	return nil
 }
 
-func TTSConsoleSay(c *Core, s string) error {
+func TTSConsoleSay(c *core.Core, s string) error {
 	fmt.Printf("TTS console: %s", s)
 	return nil
 }
