@@ -25,6 +25,7 @@ func main() {
 	audio.RegisterWAVPlayer(c)
 
 	normalize.RegisterPrepare(c)
+	normalize.RegisterNumbers(c)
 
 	greetings.Register(c)
 
