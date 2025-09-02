@@ -1,13 +1,19 @@
 ```bash
-docker build -f Dockerfile-dependencies -t golosok-dependencies-build .
+docker build -t golosok .
 
-mkdir -p build/vosk
+# Запуск на Linux
+docker run --rm -it --device /dev/snd --group-add audio --name golosok golosok
 
-CID=$(docker create golosok-dependencies-build)
-docker cp "$CID":/opt/out-vosk ./build/vosk
-docker rm "$CID"
+# Запуск на Windows / macOS
+docker run --rm -it -e PULSE_SERVER=tcp:host.docker.internal:4713 golosok
+
+# Тестовый запуск с фейковым STT
+docker run --rm golosok -stt-test 1
 ```
 
 ```bash
-sudo apt install rhvoice rhvoice-russian
+#mkdir -p build
+#CID=$(docker create golosok)
+#docker cp "$CID":/opt/golosok/build ./build/vosk
+#docker rm "$CID"
 ```

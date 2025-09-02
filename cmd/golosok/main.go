@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"github.com/magomedcoder/golosok/internal/audio"
 	"github.com/magomedcoder/golosok/internal/commands/greetings"
 	"github.com/magomedcoder/golosok/internal/core"
@@ -12,7 +13,19 @@ import (
 	"time"
 )
 
+type STT interface {
+	Accept([]byte) error
+
+	Out() <-chan string
+
+	Close() error
+}
+
 func main() {
+	var sttTest int
+	flag.IntVar(&sttTest, "stt-test", 0, "STT test")
+	flag.Parse()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -35,7 +48,7 @@ func main() {
 
 	mic, err := audio.NewMic(sampleRate)
 	if err != nil {
-		log.Fatalf("mic init: %v", err)
+		log.Fatalf("mic-init: %v", err)
 	}
 	defer func(mic *audio.Mic) {
 		if err := mic.Close(); err != nil {
@@ -43,23 +56,23 @@ func main() {
 		}
 	}(mic)
 
-	stt, err := audio.NewVoskSTT("./models/vosk", sampleRate)
-	if err != nil {
-		log.Fatalf("vosk init: %v", err)
+	var stt STT
+
+	if sttTest == 1 {
+		lines := []string{"привет", "дата", "команды"}
+		stt = audio.NewFakeSTT(lines, 500*time.Millisecond)
+	} else {
+		stt, err = audio.NewVoskSTT("./models/vosk", sampleRate)
+		if err != nil {
+			log.Fatalf("vosk init: %v", err)
+		}
 	}
 
-	// Для теста
-	//stt := audio.NewFakeSTT([]string{
-	//	"привет",
-	//	"дата",
-	//	"команды",
-	//}, 500*time.Millisecond)
-
-	defer func(stt *audio.FakeSTT) {
+	defer func() {
 		if err := stt.Close(); err != nil {
-			log.Printf("vosk-сlose: %v", err)
+			log.Printf("stt-close: %v", err)
 		}
-	}(stt)
+	}()
 
 	mic.SetBlockFunc(c.IsMicBlocked)
 
