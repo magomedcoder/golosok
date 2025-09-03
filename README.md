@@ -42,9 +42,12 @@ docker run --rm golosok -stt-test 1
 
 ### Получение бинарника для Linux из контейнера
 
+Если нужно собрать исполняемый файл без запуска контейнера, можно сделать это с помощью отдельного Dockerfile-build
+
 ```bash
+docker build -f Dockerfile-build -t golosok-build .
 mkdir -p build
-CID=$(docker create golosok)
+CID=$(docker create golosok-build)
 docker cp "$CID":/opt/golosok/build ./build
 docker rm "$CID"
 ```
