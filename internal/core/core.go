@@ -10,6 +10,7 @@ import (
 )
 
 type Core struct {
+	VoiceNames      []string
 	timers          [8]int64
 	timersEnd       [8]func(*Core)
 	ctxMu           sync.Mutex
@@ -26,6 +27,7 @@ type Core struct {
 
 func NewCore() *Core {
 	c := &Core{
+		VoiceNames:      []string{"голосок", "голос"},
 		Commands:        map[string]interface{}{},
 		Normalizers:     map[string][2]interface{}{},
 		NormalizationID: "prepare",
@@ -245,9 +247,13 @@ func (c *Core) RunInputStr(s string) bool {
 	}
 
 	tokens := splitTokens(s)
-	for i, _ := range tokens {
-		rest := joinTokens(tokens[i:])
-		return c.executeNext(rest, c.Commands)
+	for i, t := range tokens {
+		for _, vName := range c.VoiceNames {
+			if t == vName {
+				rest := joinTokens(tokens[i+1:])
+				return c.executeNext(rest, c.Commands)
+			}
+		}
 	}
 
 	return c.executeNext(s, c.Commands)

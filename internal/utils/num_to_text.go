@@ -2,6 +2,7 @@ package utils
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -191,4 +192,22 @@ func join(a []string, sep string) string {
 	}
 
 	return out
+}
+
+func ParseEndNumber(s, word string) int {
+	s = strings.TrimSpace(s)
+	if !strings.Contains(s, word) {
+		return 0
+	}
+
+	parts := strings.Split(s, " ")
+	for i := 0; i < len(parts)-1; i++ {
+		if parts[i+1] == word {
+			if n, err := strconv.Atoi(parts[i]); err == nil {
+				return n
+			}
+		}
+	}
+
+	return 0
 }
