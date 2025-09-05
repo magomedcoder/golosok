@@ -23,7 +23,10 @@ type STT interface {
 
 func main() {
 	var sttTest int
+	var voskModel string
+
 	flag.IntVar(&sttTest, "stt-test", 0, "STT test")
+	flag.StringVar(&voskModel, "vosk-model", "./lib/models/vosk", "Vosk model")
 	flag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -53,7 +56,7 @@ func main() {
 		lines := []string{"привет", "дата", "команды"}
 		stt = audio.NewFakeSTT(lines, 500*time.Millisecond)
 	} else {
-		stt, err = audio.NewVoskSTT("./models/vosk", sampleRate)
+		stt, err = audio.NewVoskSTT(voskModel, sampleRate)
 		if err != nil {
 			log.Fatalf("vosk init: %v", err)
 		}

@@ -18,15 +18,9 @@
 ```bash
 docker build -t golosok-linux .
 
-mkdir -p build/golosok-linux
-
-mkdir -p build/golosok-linux/models
-
 CID=$(docker create golosok-linux)
 
-docker cp "$CID":/opt/golosok/build/golosok ./build/golosok-linux
-
-docker cp "$CID":/opt/golosok/models ./build/golosok-linux/models
+docker cp "$CID":/opt/golosok/build ./build/golosok-linux
 
 docker rm "$CID"
 ```
@@ -36,13 +30,9 @@ docker rm "$CID"
 ```bash
 docker build -f Dockerfile-windows -t golosok-windows .
 
-mkdir -p build/golosok-windows
-
-mkdir -p build/golosok-linux/models
-
 CID=$(docker create golosok-windows)
 
-docker cp "$CID":/opt/golosok/build/golosok.exe ./build/golosok-windows/golosok.exe
+docker cp "$CID":/opt/golosok/build ./build/golosok-windows
 
 docker rm "$CID"
 ```
@@ -51,10 +41,24 @@ docker rm "$CID"
 
 ```bash
 # Linux
-./golosok -stt-test 1
+cd build/golosok-linux
+LD_LIBRARY_PATH=./lib ./golosok -stt-test 1
 
 # Windows
+cd build/golosok-windows
 golosok.exe -stt-test 1
+```
+
+## Запуск
+
+```bash
+# Linux
+cd build/golosok-linux
+LD_LIBRARY_PATH=./lib ./golosok
+
+# Windows
+cd build/golosok-windows
+golosok.exe
 ```
 
 ---

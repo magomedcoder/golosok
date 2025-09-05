@@ -13,11 +13,12 @@ RUN apt update && apt install -y --no-install-recommends git curl wget unzip bui
 #RUN apt update && apt -y -t bookworm-backports install rhvoice speech-dispatcher-rhvoice rhvoice-russian \
 #    && rm -rf /var/lib/apt/lists/*
 
+ENV GOLANG_VERSION=1.24.6
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV CGO_ENABLED=1
 ENV PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:/usr/local/lib/pkgconfig"
 ENV VOSK_VERSION=0.3.45
-ENV GOLANG_VERSION=1.24.6
+ENV VOSK_MODEL="small-ru-0.22"
 
 RUN wget -q https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz
 
@@ -29,23 +30,25 @@ WORKDIR /opt/golosok
 
 COPY . .
 
-RUN mkdir -p build/vosk
+RUN mkdir -p build/lib
 
 RUN wget -q https://github.com/alphacep/vosk-api/releases/download/v${VOSK_VERSION}/vosk-linux-x86_64-${VOSK_VERSION}.zip
 
 RUN unzip -q vosk-linux-x86_64-${VOSK_VERSION}.zip -d /tmp/vosk
 
-RUN cp /tmp/vosk/vosk-linux-x86_64-${VOSK_VERSION}/libvosk.so build/vosk/
+RUN cp /tmp/vosk/vosk-linux-x86_64-${VOSK_VERSION}/libvosk.so build/lib/
 
-RUN cp /tmp/vosk/vosk-linux-x86_64-${VOSK_VERSION}/vosk_api.h build/vosk/ || true
+RUN cp /tmp/vosk/vosk-linux-x86_64-${VOSK_VERSION}/vosk_api.h build/lib/ || true
 
 RUN rm -rf /tmp/vosk vosk-linux-x86_64-${VOSK_VERSION}.zip
 
-RUN wget -q https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip
+RUN wget -q https://alphacephei.com/vosk/models/vosk-model-${VOSK_MODEL}.zip
 
-RUN unzip -q vosk-model-small-ru-0.22.zip -d models
+RUN unzip -q vosk-model-${VOSK_MODEL}.zip -d build/lib/models
 
-RUN rm vosk-model-small-ru-0.22.zip
+RUN mv build/lib/models/vosk-model-${VOSK_MODEL} build/lib/models/vosk
+
+RUN rm vosk-model-${VOSK_MODEL}.zip
 
 #RUN pkg-config --print-errors --exists alsa portaudio-2.0
 #

@@ -1,6 +1,10 @@
-.PHONY: install
-install:
-	export LD_LIBRARY_PATH="$(pwd)/build/vosk:${LD_LIBRARY_PATH}"
+.PHONY: run
+run:
+	LD_LIBRARY_PATH=$(abspath ./build/golosok-linux/lib) \
+	CGO_CPPFLAGS="-I$(abspath ./build/golosok-linux/lib)" \
+	CGO_CFLAGS="-I$(abspath ./build/golosok-linux/lib)" \
+	CGO_LDFLAGS="-L$(abspath ./build/golosok-linux/lib) -Wl,-rpath,'$$ORIGIN/../../build/golosok-linux/lib'" \
+	go run -tags=cgo_vosk ./cmd/golosok -vosk-model ./build/golosok-linux/lib/models/vosk
 
 .PHONY: build
 build:
@@ -9,7 +13,3 @@ build:
 .PHONY: build-windows
 build-windows:
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o build/golosok.exe ./cmd/golosok
-
-.PHONY: run
-run:
-	go run -tags=cgo_vosk ./cmd/golosok

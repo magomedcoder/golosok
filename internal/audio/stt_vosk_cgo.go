@@ -4,8 +4,8 @@
 package audio
 
 /*
-#cgo CFLAGS:  -I${SRCDIR}/../../build/vosk
-#cgo LDFLAGS: -L${SRCDIR}/../../build/vosk -lvosk -pthread -Wl,-rpath,'$ORIGIN/../../build/vosk'
+#cgo CFLAGS:  -I${SRCDIR}/../../build/lib
+#cgo LDFLAGS: -L${SRCDIR}/../../build/lib -lvosk -pthread -Wl,-rpath,'$ORIGIN/../../build/lib'
 #include <stdlib.h>
 #include <vosk_api.h>
 */
