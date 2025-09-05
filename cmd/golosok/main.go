@@ -46,17 +46,8 @@ func main() {
 		log.Printf("ошибка при настройке: %v", err)
 	}
 
-	mic, err := audio.NewMic(sampleRate)
-	if err != nil {
-		log.Fatalf("mic-init: %v", err)
-	}
-	defer func(mic *audio.Mic) {
-		if err := mic.Close(); err != nil {
-			log.Printf("mic-сlose: %v", err)
-		}
-	}(mic)
-
 	var stt STT
+	var err error
 
 	if sttTest == 1 {
 		lines := []string{"привет", "дата", "команды"}
@@ -67,14 +58,25 @@ func main() {
 			log.Fatalf("vosk init: %v", err)
 		}
 	}
-
 	defer func() {
 		if err := stt.Close(); err != nil {
 			log.Printf("stt-close: %v", err)
 		}
 	}()
 
-	mic.SetBlockFunc(c.IsMicBlocked)
+	var mic *audio.Mic
+	if sttTest != 1 {
+		mic, err = audio.NewMic(sampleRate)
+		if err != nil {
+			log.Fatalf("mic-init: %v", err)
+		}
+		defer func(mic *audio.Mic) {
+			if err := mic.Close(); err != nil {
+				log.Printf("mic-сlose: %v", err)
+			}
+		}(mic)
+		mic.SetBlockFunc(c.IsMicBlocked)
+	}
 
 	go func() {
 		for {
@@ -95,20 +97,33 @@ func main() {
 		}
 	}()
 
-	buf := make([]byte, 8000)
-	for ctx.Err() == nil {
-		c.UpdateTimers()
+	if sttTest != 1 {
+		buf := make([]byte, 8000)
+		for ctx.Err() == nil {
+			c.UpdateTimers()
 
-		if c.IsMicBlocked() {
-			time.Sleep(50 * time.Millisecond)
-			continue
+			if c.IsMicBlocked() {
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+
+			n, err := mic.Read(buf)
+			if err != nil {
+				continue
+			}
+
+			_ = stt.Accept(buf[:n])
 		}
-
-		n, err := mic.Read(buf)
-		if err != nil {
-			continue
+	} else {
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				c.UpdateTimers()
+			}
 		}
-
-		_ = stt.Accept(buf[:n])
 	}
 }

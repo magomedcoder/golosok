@@ -2,16 +2,16 @@ FROM debian:bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN printf "Types: deb\nURIs: https://deb.debian.org/debian\nSuites: bookworm-backports\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n" \
-    > /etc/apt/sources.list.d/backports.sources
+#RUN printf "Types: deb\nURIs: https://deb.debian.org/debian\nSuites: bookworm-backports\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n" \
+#    > /etc/apt/sources.list.d/backports.sources
 
 RUN apt update && apt install -y --no-install-recommends git curl wget unzip build-essential pkg-config ca-certificates \
     libasound2 libasound2-dev libportaudio2 portaudio19-dev libjack-jackd2-0 libjack-jackd2-dev libopenblas0 \
     libgfortran5 libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN apt update && apt -y -t bookworm-backports install rhvoice speech-dispatcher-rhvoice rhvoice-russian \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt update && apt -y -t bookworm-backports install rhvoice speech-dispatcher-rhvoice rhvoice-russian \
+#    && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV CGO_ENABLED=1
@@ -47,14 +47,14 @@ RUN unzip -q vosk-model-small-ru-0.22.zip -d models
 
 RUN rm vosk-model-small-ru-0.22.zip
 
-RUN pkg-config --print-errors --exists alsa portaudio-2.0
-
-RUN pkg-config --cflags --libs alsa portaudio-2.0
+#RUN pkg-config --print-errors --exists alsa portaudio-2.0
+#
+#RUN pkg-config --cflags --libs alsa portaudio-2.0
 
 ENV LD_LIBRARY_PATH="/opt/golosok/build/vosk"
 
 RUN make build
 
-ENTRYPOINT ["/opt/golosok/build/golosok"]
-
-CMD ["-stt-test", "0"]
+#ENTRYPOINT ["/opt/golosok/build/golosok"]
+#
+#CMD ["-stt-test", "0"]

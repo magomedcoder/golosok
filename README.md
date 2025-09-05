@@ -11,46 +11,50 @@
 
 ---
 
-## Запуск в Docker
+## Сборка
 
-### Сборка
+### Linux
 
 ```bash
-docker build -t golosok .
+docker build -t golosok-linux .
+
+mkdir -p build/golosok-linux
+
+mkdir -p build/golosok-linux/models
+
+CID=$(docker create golosok-linux)
+
+docker cp "$CID":/opt/golosok/build/golosok ./build/golosok-linux
+
+docker cp "$CID":/opt/golosok/models ./build/golosok-linux/models
+
+docker rm "$CID"
 ```
 
-### Запуск на Linux
+### Windows
 
 ```bash
-docker run --rm -it --device /dev/snd --group-add audio --name golosok golosok
-```
+docker build -f Dockerfile-windows -t golosok-windows .
 
-### Запуск на Windows / macOS
+mkdir -p build/golosok-windows
 
-Для работы звука используем PulseAudio:
+mkdir -p build/golosok-linux/models
 
-```bash
-docker run --rm -it -e PULSE_SERVER=tcp:host.docker.internal:4713 golosok
+CID=$(docker create golosok-windows)
+
+docker cp "$CID":/opt/golosok/build/golosok.exe ./build/golosok-windows/golosok.exe
+
+docker rm "$CID"
 ```
 
 ### Тестовый запуск с фейковым STT
 
 ```bash
-docker run --rm golosok -stt-test 1
-```
+# Linux
+./golosok -stt-test 1
 
----
-
-### Получение бинарника для Linux из контейнера
-
-Если нужно собрать исполняемый файл без запуска контейнера, можно сделать это с помощью отдельного Dockerfile-build
-
-```bash
-docker build -f Dockerfile-build -t golosok-build .
-mkdir -p build
-CID=$(docker create golosok-build)
-docker cp "$CID":/opt/golosok/build ./build
-docker rm "$CID"
+# Windows
+golosok.exe -stt-test 1
 ```
 
 ---
@@ -99,7 +103,8 @@ docker rm "$CID"
 
    > Здесь `"голосок пример"` и `"голосок ещёпример"` - ключевые фразы, которые должен произнести пользователь.
    >
-   > `phrase` - остаток распознанного текста после ключа. Например, если сказать «голосок пример тест», то в функцию придёт `"тест"`.
+   > `phrase` - остаток распознанного текста после ключа.
+   > Например, если сказать «голосок пример тест», то в функцию придёт `"тест"`.
 
 
 3. Подключите новую команду в `cmd/golosok/main.go`.
