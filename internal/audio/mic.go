@@ -3,13 +3,21 @@
 package audio
 
 import (
+	"errors"
+
 	"github.com/gordonklaus/portaudio"
 )
+
+var errMicBufTooSmall = errors.New("буфер микрофона меньше кадра: нужен len >= FrameBytes()")
 
 type Mic struct {
 	stream  *portaudio.Stream
 	in      []int16
 	blockFn func() bool
+}
+
+func (m *Mic) FrameBytes() int {
+	return len(m.in) * 2
 }
 
 func NewMic(sampleRate int) (*Mic, error) {
@@ -42,14 +50,21 @@ func (m *Mic) Read(dst []byte) (int, error) {
 		return 0, nil
 	}
 
-	//buf := make([]int16, len(dst)/2)
+	need := len(m.in) * 2
+	if len(dst) < need {
+		return 0, errMicBufTooSmall
+	}
+
 	if err := m.stream.Read(); err != nil {
 		return 0, err
 	}
 
-	n := copy(dst, int16SliceToBytes(m.in))
+	for i, v := range m.in {
+		dst[2*i] = byte(v)
+		dst[2*i+1] = byte(v >> 8)
+	}
 
-	return n, nil
+	return need, nil
 }
 
 func (m *Mic) Close() error {
@@ -63,14 +78,4 @@ func (m *Mic) Close() error {
 	}
 
 	return nil
-}
-
-func int16SliceToBytes(s []int16) []byte {
-	b := make([]byte, len(s)*2)
-	for i, v := range s {
-		b[2*i] = byte(v)
-		b[2*i+1] = byte(v >> 8)
-	}
-
-	return b
 }

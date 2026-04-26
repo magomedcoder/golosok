@@ -8,6 +8,10 @@ func NewMic(sampleRate int) (*Mic, error) {
 	return &Mic{}, nil
 }
 
+func (m *Mic) FrameBytes() int {
+	return 16000
+}
+
 func (m *Mic) SetBlockFunc(f func() bool) {
 
 }

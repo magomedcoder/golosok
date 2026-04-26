@@ -1,5 +1,4 @@
 //go:build cgo_vosk
-// +build cgo_vosk
 
 package audio
 
@@ -22,7 +21,9 @@ type VoskSTT struct {
 	out   chan string
 }
 
-func NewVoskSTT(modelPath string, sampleRate int) (*VoskSTT, error) {
+func NewVoskSTT(modelPath string, sampleRate int, grammarJSON string) (*VoskSTT, error) {
+	C.vosk_set_log_level(-1)
+
 	mp := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(mp))
 
@@ -38,6 +39,12 @@ func NewVoskSTT(modelPath string, sampleRate int) (*VoskSTT, error) {
 	}
 
 	C.vosk_recognizer_set_words(rec, 1)
+
+	if grammarJSON != "" && grammarJSON != "[]" {
+		g := C.CString(grammarJSON)
+		C.vosk_recognizer_set_grm(rec, g)
+		C.free(unsafe.Pointer(g))
+	}
 
 	v := &VoskSTT{
 		model: m,
@@ -56,7 +63,8 @@ func (v *VoskSTT) Accept(pcm []byte) error {
 		return errors.New("неверная длина PCM16LE буфера)")
 	}
 
-	res := C.vosk_recognizer_accept_waveform(v.rec, (*C.char)(unsafe.Pointer(&pcm[0])), C.int(len(pcm)))
+	nShort := C.int(len(pcm) / 2)
+	res := C.vosk_recognizer_accept_waveform_s(v.rec, (*C.short)(unsafe.Pointer(&pcm[0])), nShort)
 	if int(res) != 0 {
 		if js := C.vosk_recognizer_result(v.rec); js != nil {
 			go pushJSON(v.out, C.GoString(js))
@@ -93,9 +101,16 @@ func (v *VoskSTT) Close() error {
 
 func pushJSON(ch chan string, s string) {
 	var obj map[string]any
-	if json.Unmarshal([]byte(s), &obj) == nil {
-		if t, _ := obj["text"].(string); t != "" {
-			ch <- t
-		}
+	if json.Unmarshal([]byte(s), &obj) != nil {
+		return
+	}
+
+	if t, _ := obj["text"].(string); t != "" {
+		ch <- t
+		return
+	}
+
+	if t, _ := obj["partial"].(string); t != "" {
+		ch <- t
 	}
 }

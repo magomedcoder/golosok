@@ -103,7 +103,7 @@ func cancelTimer(c *core.Core, phrase string) {
 	}
 
 	n := -1
-	for _, f := range strings.Fields(p) {
+	for f := range strings.FieldsSeq(p) {
 		if x, err := strconv.Atoi(f); err == nil {
 			n = x
 			break

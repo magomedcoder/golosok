@@ -20,7 +20,9 @@ docker build -t golosok-linux .
 
 CID=$(docker create golosok-linux)
 
-docker cp "$CID":/opt/golosok/build ./build/golosok-linux
+mkdir -p ./build/golosok-linux
+
+docker cp "$CID":/opt/golosok/build/. ./build/golosok-linux
 
 docker rm "$CID"
 ```
@@ -32,7 +34,9 @@ docker build -f Dockerfile-windows -t golosok-windows .
 
 CID=$(docker create golosok-windows)
 
-docker cp "$CID":/opt/golosok/build ./build/golosok-windows
+mkdir -p ./build/golosok-windows
+
+docker cp "$CID":/opt/golosok/build/. ./build/golosok-windows
 
 docker rm "$CID"
 ```
@@ -47,6 +51,13 @@ LD_LIBRARY_PATH=./lib ./golosok -stt-test 1
 # Windows
 cd build/golosok-windows
 golosok.exe -stt-test 1
+```
+
+### Зависимости для Ubuntu/WSL
+
+```bash
+sudo apt update
+sudo apt install -y libportaudio2 portaudio19-dev pulseaudio pulseaudio-utils alsa-utils libasound2-plugins rhvoice rhvoice-russian
 ```
 
 ## Запуск

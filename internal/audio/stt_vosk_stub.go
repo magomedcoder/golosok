@@ -8,7 +8,8 @@ import (
 
 type VoskSTT struct{}
 
-func NewVoskSTT(modelPath string, sampleRate int) (*VoskSTT, error) {
+func NewVoskSTT(modelPath string, sampleRate int, grammarJSON string) (*VoskSTT, error) {
+	_ = grammarJSON
 	return nil, fmt.Errorf("vosk недоступен")
 }
 

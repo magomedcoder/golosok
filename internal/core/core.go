@@ -5,8 +5,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 type Core struct {
@@ -16,25 +20,25 @@ type Core struct {
 	ctxMu           sync.Mutex
 	micBlockedMu    sync.RWMutex
 	micBlocked      bool
-	Commands        map[string]interface{}
-	Normalizers     map[string][2]interface{}
+	Commands        map[string]any
+	Normalizers     map[string][2]any
 	NormalizationID string
-	TTSEngines      map[string][3]interface{}
+	TTSEngines      map[string][3]any
 	TTSEngineID     string
 	PlayWavID       string
-	PlayWavs        map[string][2]interface{}
+	PlayWavs        map[string][2]any
 }
 
 func NewCore() *Core {
 	c := &Core{
 		VoiceNames:      []string{"голосок", "голос"},
-		Commands:        map[string]interface{}{},
-		Normalizers:     map[string][2]interface{}{},
+		Commands:        map[string]any{},
+		Normalizers:     map[string][2]any{},
 		NormalizationID: "prepare",
-		TTSEngines:      map[string][3]interface{}{},
+		TTSEngines:      map[string][3]any{},
 		TTSEngineID:     "rhvoice",
 		PlayWavID:       "oto",
-		PlayWavs:        map[string][2]interface{}{},
+		PlayWavs:        map[string][2]any{},
 	}
 	return c
 }
@@ -120,6 +124,48 @@ func (c *Core) ClearTimers() {
 	}
 }
 
+func insertWakeWordBoundaries(s string, names []string) string {
+	sorted := append([]string(nil), names...)
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i]) > len(sorted[j])
+	})
+
+	var b strings.Builder
+	i := 0
+	for i < len(s) {
+		matched := false
+		for _, name := range sorted {
+			if name == "" {
+				continue
+			}
+
+			if len(s)-i >= len(name) && s[i:i+len(name)] == name {
+				b.WriteString(name)
+				i += len(name)
+				if i < len(s) {
+					if s[i] != ' ' && s[i] != '\t' {
+						b.WriteByte(' ')
+					}
+				}
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			_, sz := utf8.DecodeRuneInString(s[i:])
+			if sz == 0 {
+				break
+			}
+
+			b.WriteString(s[i : i+sz])
+			i += sz
+		}
+	}
+
+	return b.String()
+}
+
 func splitTokens(s string) []string {
 	var out []string
 	cur := ""
@@ -142,18 +188,18 @@ func splitTokens(s string) []string {
 }
 
 func joinTokens(t []string) string {
-	res := ""
+	var res strings.Builder
 	for i, s := range t {
 		if i > 0 {
-			res += " "
+			res.WriteString(" ")
 		}
 
-		res += s
+		res.WriteString(s)
 	}
-	return res
+	return res.String()
 }
 
-func (c *Core) callFunc(phrase string, fn interface{}) bool {
+func (c *Core) callFunc(phrase string, fn any) bool {
 	switch f := fn.(type) {
 	case func(*Core, string):
 		f(c, phrase)
@@ -207,13 +253,13 @@ func splitVariants(s string) []string {
 	return res
 }
 
-func hasNested(v interface{}) bool {
-	_, ok := v.(map[string]interface{})
+func hasNested(v any) bool {
+	_, ok := v.(map[string]any)
 	return ok
 }
 
-func (c *Core) executeNext(phrase string, ctx interface{}) bool {
-	sw, ok := ctx.(map[string]interface{})
+func (c *Core) executeNext(phrase string, ctx any) bool {
+	sw, ok := ctx.(map[string]any)
 	if !ok {
 		return false
 	}
@@ -225,12 +271,12 @@ func (c *Core) executeNext(phrase string, ctx interface{}) bool {
 	for k, v := range sw {
 		if hasNested(v) {
 			if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok {
-				if m, _ := v.(map[string]interface{}); m != nil {
+				if m, _ := v.(map[string]any); m != nil {
 					return c.executeNext(rest, m)
 				}
 			}
 		} else {
-			if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok && rest != "" {
+			if _, rest, ok := startsWithAny(phrase, splitVariants(k)); ok {
 				return c.callFunc(rest, v)
 			}
 		}
@@ -242,17 +288,18 @@ func (c *Core) executeNext(phrase string, ctx interface{}) bool {
 }
 
 func (c *Core) RunInputStr(s string) bool {
+	s = strings.TrimSpace(s)
 	if s == "" {
 		return false
 	}
 
+	s = insertWakeWordBoundaries(s, c.VoiceNames)
+
 	tokens := splitTokens(s)
 	for i, t := range tokens {
-		for _, vName := range c.VoiceNames {
-			if t == vName {
-				rest := joinTokens(tokens[i+1:])
-				return c.executeNext(rest, c.Commands)
-			}
+		if slices.Contains(c.VoiceNames, t) {
+			rest := joinTokens(tokens[i+1:])
+			return c.executeNext(rest, c.Commands)
 		}
 	}
 
@@ -299,7 +346,9 @@ func (c *Core) sayVia(id string, text string) error {
 }
 
 func (c *Core) Say(text string) {
-	_ = c.sayVia(c.TTSEngineID, c.Normalize(text))
+	if err := c.sayVia(c.TTSEngineID, c.Normalize(text)); err != nil {
+		log.Printf("TTS/воспроизведение: %v", err)
+	}
 }
 
 func (c *Core) TTSToFile(text, filename string) error {

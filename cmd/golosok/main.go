@@ -24,9 +24,11 @@ type STT interface {
 func main() {
 	var sttTest int
 	var voskModel string
+	var voskGrammar bool
 
 	flag.IntVar(&sttTest, "stt-test", 0, "STT test")
 	flag.StringVar(&voskModel, "vosk-model", "./lib/models/vosk", "Vosk model")
+	flag.BoolVar(&voskGrammar, "vosk-grammar", true, "ограничить распознавание списком команд (set_grm); для старых HCLG-моделей отключите")
 	flag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -56,7 +58,11 @@ func main() {
 		lines := []string{"привет", "дата", "команды"}
 		stt = audio.NewFakeSTT(lines, 500*time.Millisecond)
 	} else {
-		stt, err = audio.NewVoskSTT(voskModel, sampleRate)
+		grammar := ""
+		if voskGrammar {
+			grammar = c.STTGrammarJSON()
+		}
+		stt, err = audio.NewVoskSTT(voskModel, sampleRate, grammar)
 		if err != nil {
 			log.Fatalf("vosk init: %v", err)
 		}
@@ -101,7 +107,7 @@ func main() {
 	}()
 
 	if sttTest != 1 {
-		buf := make([]byte, 8000)
+		buf := make([]byte, mic.FrameBytes())
 		for ctx.Err() == nil {
 			c.UpdateTimers()
 

@@ -1,7 +1,7 @@
 FROM debian:bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV GOLANG_VERSION=1.24.6
+ENV GOLANG_VERSION=1.26.0
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV CGO_ENABLED=0
 

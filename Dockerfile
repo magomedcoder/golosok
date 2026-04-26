@@ -13,7 +13,7 @@ RUN apt update && apt install -y --no-install-recommends git curl wget unzip bui
 #RUN apt update && apt -y -t bookworm-backports install rhvoice speech-dispatcher-rhvoice rhvoice-russian \
 #    && rm -rf /var/lib/apt/lists/*
 
-ENV GOLANG_VERSION=1.24.6
+ENV GOLANG_VERSION=1.26.0
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV CGO_ENABLED=1
 ENV PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:/usr/local/lib/pkgconfig"
