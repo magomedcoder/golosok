@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t golosok-linux .
+
+      - name: Extract build directory
+        run: |
+          CID=$(docker create golosok-linux)
+          mkdir -p ./build/golosok-linux
+          docker cp "$CID":/opt/golosok/build/. ./build/golosok-linux
+          docker rm "$CID"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: golosok-linux-amd64
+          path: build/golosok-linux/
+
+  windows:
+    name: Windows (Docker cross-build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f Dockerfile-windows -t golosok-windows .
+
+      - name: Extract build directory
+        run: |
+          CID=$(docker create golosok-windows)
+          mkdir -p ./build/golosok-windows
+          docker cp "$CID":/opt/golosok/build/. ./build/golosok-windows
+          docker rm "$CID"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: golosok-windows-amd64
+          path: build/golosok-windows/
